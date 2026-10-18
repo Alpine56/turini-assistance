@@ -63,6 +63,16 @@ def main():
     remplacer(config, 'pub static ref ORG: RwLock<String> = RwLock::new("com.carriez".to_owned());',
               'pub static ref ORG: RwLock<String> = RwLock::new("fr.turini".to_owned());')
 
+    # Réception seule : le client affiche son ID et son mot de passe, sans prise en main d'un autre
+    # poste. RustDesk réserve ce mode aux configurations signées par sa société : on le fixe ici.
+    remplacer(config, '        .get("conn-type")\n        .map_or(false, |x| x == ("incoming"))',
+              '        .get("conn-type")\n        .map_or(true, |x| x != ("outgoing"))')
+
+    couleurs = "flutter/lib/common.dart"
+    for nom, alpha in (("accent", "FF"), ("accent50", "77"), ("accent80", "AA")):
+        remplacer(couleurs, f"static const Color {nom} = Color(0x{alpha}0071FF);",
+                  f"static const Color {nom} = Color(0x{alpha}12357A);")
+
     # Sans serveur d'API à nous, ne jamais se rabattre sur celui de RustDesk (comptes, appareils).
     remplacer("src/common.rs", '    "https://admin.rustdesk.com".to_owned()\n}',
               "    String::new()\n}")
