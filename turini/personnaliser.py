@@ -32,6 +32,16 @@ def remplacer(fichier, ancien, nouveau):
     print(f"{fichier} : modifié")
 
 
+def remplacer_ligne(fichier, motif, nouveau):
+    """Comme remplacer, pour une ligne dont une partie change d'une version à l'autre (l'année)."""
+    chemin = RACINE / fichier
+    texte, nombre = re.subn(motif, lambda _: nouveau, chemin.read_text(encoding="utf-8"), flags=re.M)
+    if nombre != 1:
+        sys.exit(f"{fichier} : « {motif} » trouvé {nombre} fois au lieu d'une : RustDesk a changé, adapter ce script.")
+    chemin.write_text(texte, encoding="utf-8")
+    print(f"{fichier} : modifié")
+
+
 def main():
     if len(sys.argv) != 3:
         sys.exit(__doc__)
@@ -78,6 +88,9 @@ def main():
               '    "Win32_UI_WindowsAndMessaging",\n] }')
     remplacer(f"{portable}/Cargo.toml", 'ProductName = "RustDesk"', f'ProductName = "{PRODUIT}"')
     remplacer(f"{portable}/Cargo.toml", 'FileDescription = "RustDesk Remote Desktop"', f'FileDescription = "{PRODUIT}"')
+    remplacer(f"{portable}/Cargo.toml", 'OriginalFilename = "rustdesk.exe"', 'OriginalFilename = "turini-assistance.exe"')
+    remplacer_ligne(f"{portable}/Cargo.toml", r'^LegalCopyright = "Copyright © \d{4} Purslane Tech Pte\. Ltd\. All rights reserved\."$',
+                    'LegalCopyright = "Turini, d\'après RustDesk (AGPL-3.0, code : github.com/Alpine56/turini-assistance)"')
 
     copies = {
         "icon.ico": ["res/icon.ico", "flutter/windows/runner/resources/app_icon.ico"],
