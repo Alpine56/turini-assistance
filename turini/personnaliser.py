@@ -65,6 +65,20 @@ def main():
     remplacer(rc, 'All rights reserved." "\\0"',
               'Turini, d\'après RustDesk (AGPL-3.0, code : github.com/Alpine56/turini-assistance)." "\\0"')
 
+    # Lanceur portable : mise à jour au démarrage (src/turini_maj.rs, propre à Turini).
+    portable = "libs/portable"
+    remplacer(f"{portable}/src/main.rs", "fn main() -> Result<(), String> {",
+              "#[cfg(windows)]\nmod turini_maj;\n\nfn main() -> Result<(), String> {")
+    remplacer(f"{portable}/src/main.rs", "    let click_setup = args.is_empty()",
+              "    #[cfg(windows)]\n    if args.is_empty() && turini_maj::verifier() {\n        return Ok(());\n    }\n"
+              "    let click_setup = args.is_empty()")
+    remplacer(f"{portable}/Cargo.toml", '    "Win32_System_SystemInformation",\n] }',
+              '    "Win32_System_SystemInformation",\n    "Win32_Security",\n    "Win32_Security_Cryptography",\n'
+              '    "Win32_System_Com",\n    "Win32_System_Com_Urlmon",\n    "Win32_UI",\n'
+              '    "Win32_UI_WindowsAndMessaging",\n] }')
+    remplacer(f"{portable}/Cargo.toml", 'ProductName = "RustDesk"', f'ProductName = "{PRODUIT}"')
+    remplacer(f"{portable}/Cargo.toml", 'FileDescription = "RustDesk Remote Desktop"', f'FileDescription = "{PRODUIT}"')
+
     copies = {
         "icon.ico": ["res/icon.ico", "flutter/windows/runner/resources/app_icon.ico"],
         "icon.png": ["res/icon.png"],

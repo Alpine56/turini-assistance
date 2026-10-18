@@ -1,7 +1,7 @@
 # Compile « Turini Assistance » pour Windows : RustDesk personnalisé par turini/personnaliser.py
 # (serveur et clé Turini intégrés, nom et icônes Turini). Lancement à la main : onglet Actions,
 # « Turini Assistance (Windows) », Run workflow. Résultat : artefact turini-assistance-windows.
-# Généré depuis le job Windows x64 de flutter-build.yml (sans signature, MSI ni publication).
+# Généré depuis le job Windows x64 de flutter-build.yml (sans signature ni MSI), avec publication d’une version GitHub.
 name: Turini Assistance (Windows)
 on:
   workflow_dispatch:
@@ -16,8 +16,13 @@ on:
         required: true
         default: jHzaYRUOd64zE2dxH3dIzkhk3rbShKYWmwEz+biaMEY=
         type: string
+      maj:
+        description: Adresse de la fiche de version lue au démarrage (mise à jour automatique)
+        required: true
+        default: http://192.168.1.61:8080/telechargements/turini-assistance.txt
+        type: string
 permissions:
-  contents: read
+  contents: write
 env:
   SCITER_RUST_VERSION: '1.75'
   RUST_VERSION: '1.75'
@@ -90,6 +95,13 @@ jobs:
         TURINI_HOTE: ${{ inputs.hote }}
         TURINI_CLE: ${{ inputs.cle }}
       run: python3 turini/personnaliser.py "$TURINI_HOTE" "$TURINI_CLE"
+    - name: Numéro de version Turini
+      shell: bash
+      env:
+        TURINI_URL_MAJ: ${{ inputs.maj }}
+      run: |-
+        echo "TURINI_VERSION=$(date -u +%Y.%-m.%-d).${{ github.run_number }}" >> "$GITHUB_ENV"
+        echo "TURINI_URL_MAJ=$TURINI_URL_MAJ" >> "$GITHUB_ENV"
     - name: Restore bridge files
       uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
       with:
@@ -260,14 +272,24 @@ jobs:
         popd
         mkdir -p ./SignOutput
         mv ./target/release/rustdesk-portable-packer.exe ./SignOutput/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.exe
-    - name: Renommer et publier Turini Assistance
+    - name: Renommer et préparer la fiche de version
       shell: bash
       run: |-
         mv ./SignOutput/rustdesk-${{ env.VERSION }}-x86_64.exe ./SignOutput/turini-assistance.exe
-        sha256sum ./SignOutput/turini-assistance.exe
+        empreinte=$(sha256sum ./SignOutput/turini-assistance.exe | cut -d" " -f1)
+        printf "version=%s\nurl=%s/turini-assistance.exe\nsha256=%s\n" "$TURINI_VERSION" "${TURINI_URL_MAJ%/*}" "$empreinte" > ./SignOutput/turini-assistance.txt
+        cat ./SignOutput/turini-assistance.txt
     - name: Envoyer l'exécutable
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
       with:
         name: turini-assistance-windows
-        path: ./SignOutput/turini-assistance.exe
+        path: ./SignOutput/turini-assistance.*
         if-no-files-found: error
+    - name: Publier la version
+      uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844
+      with:
+        tag_name: v${{ env.TURINI_VERSION }}
+        name: Turini Assistance ${{ env.TURINI_VERSION }}
+        files: |
+          ./SignOutput/turini-assistance.exe
+          ./SignOutput/turini-assistance.txt
