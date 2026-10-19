@@ -22,6 +22,67 @@ NOM = "Turini"  # nom de l'application (fenêtres, dossiers) ; un seul mot, sans
 PRODUIT = "Turini Assistance"
 
 
+# Réception seule : le client affiche son ID et son code, ne prend jamais la main sur un autre poste,
+# ne s'installe pas et n'a aucun réglage visible ; le serveur et sa clé sont fixés à la compilation.
+REGLAGES = {
+    "HARD_SETTINGS": {
+        "conn-type": "incoming",
+        "disable-settings": "Y",
+        "disable-installation": "Y",
+        "disable-ab": "Y",
+        "disable-account": "Y",
+    },
+    "BUILTIN_SETTINGS": {
+        "hide-help-cards": "Y",
+        "hide-powered-by-me": "Y",
+        "hide-general-settings": "Y",
+        "hide-security-settings": "Y",
+        "hide-network-settings": "Y",
+        "hide-server-settings": "Y",
+        "hide-proxy-settings": "Y",
+        "hide-websocket-settings": "Y",
+        "hide-remote-printer-settings": "Y",
+        "hide-stop-service": "Y",
+        "disable-change-id": "Y",
+        "disable-change-permanent-password": "Y",
+    },
+    # Imposés même si un fichier de configuration local dit autre chose.
+    "OVERWRITE_SETTINGS": {
+        "verification-method": "use-temporary-password",  # code à usage unique, jamais de mot de passe permanent
+        "allow-remote-config-modification": "N",  # le technicien ne peut pas changer ces réglages à distance
+        "enable-lan-discovery": "N",  # le poste ne s'annonce pas sur le réseau local
+        "direct-server": "N",  # pas d'accès direct par adresse IP, tout passe par le serveur Turini
+    },
+    "OVERWRITE_LOCAL_SETTINGS": {
+        "theme": "light",
+    },
+}
+
+
+POLICES = [  # polices du site (SIL Open Font License, textes dans turini/marque/polices/)
+    ("Barlow", "Barlow-Regular.ttf", 400),
+    ("Barlow", "Barlow-SemiBold.ttf", 600),
+    ("BarlowCondensed", "BarlowCondensed-ExtraBoldItalic.ttf", 800),
+    ("JetBrainsMono", "JetBrainsMono-Medium.ttf", 500),
+]
+
+
+def polices_pubspec():
+    lignes = []
+    for famille in dict.fromkeys(f for f, _, _ in POLICES):
+        lignes += [f"    - family: {famille}", "      fonts:"]
+        for _, fichier, poids in (p for p in POLICES if p[0] == famille):
+            lignes += [f"        - asset: assets/{fichier}", f"          weight: {poids}"]
+            if "Italic" in fichier:
+                lignes.append("          style: italic")
+    return "\n".join(lignes) + "\n"
+
+
+def table_rust(valeurs):
+    paires = ", ".join(f'("{k}", "{v}")' for k, v in valeurs.items())
+    return f"[{paires}].iter().map(|(k, v)| (k.to_string(), v.to_string())).collect()"
+
+
 def remplacer(fichier, ancien, nouveau):
     chemin = RACINE / fichier
     texte = chemin.read_text(encoding="utf-8")
@@ -63,15 +124,27 @@ def main():
     remplacer(config, 'pub static ref ORG: RwLock<String> = RwLock::new("com.carriez".to_owned());',
               'pub static ref ORG: RwLock<String> = RwLock::new("fr.turini".to_owned());')
 
-    # Réception seule : le client affiche son ID et son mot de passe, sans prise en main d'un autre
-    # poste. RustDesk réserve ce mode aux configurations signées par sa société : on le fixe ici.
-    remplacer(config, '        .get("conn-type")\n        .map_or(false, |x| x == ("incoming"))',
-              '        .get("conn-type")\n        .map_or(true, |x| x != ("outgoing"))')
+    # Réglages verrouillés à la compilation. RustDesk ne les accepte d'ordinaire que dans une
+    # configuration signée par sa société (custom.txt) : on remplit directement ses tables.
+    for table, valeurs in REGLAGES.items():
+        remplacer(config, f"pub static ref {table}: RwLock<HashMap<String, String>> = Default::default();",
+                  f"pub static ref {table}: RwLock<HashMap<String, String>> = RwLock::new({table_rust(valeurs)});")
 
     couleurs = "flutter/lib/common.dart"
     for nom, alpha in (("accent", "FF"), ("accent50", "77"), ("accent80", "AA")):
         remplacer(couleurs, f"static const Color {nom} = Color(0x{alpha}0071FF);",
                   f"static const Color {nom} = Color(0x{alpha}12357A);")
+
+    # Écran d'accueil Turini (turini/flutter/) à la place de celui de RustDesk en réception seule.
+    accueil = "flutter/lib/desktop/pages/desktop_home_page.dart"
+    remplacer(accueil, "import 'package:flutter_hbb/desktop/pages/desktop_tab_page.dart';\n",
+              "import 'package:flutter_hbb/desktop/pages/desktop_tab_page.dart';\n"
+              "import 'package:flutter_hbb/desktop/pages/turini_accueil.dart';\n")
+    remplacer(accueil, "    super.build(context);\n    final isIncomingOnly = bind.isIncomingOnly();\n",
+              "    super.build(context);\n    final isIncomingOnly = bind.isIncomingOnly();\n"
+              "    if (isIncomingOnly) return _buildBlock(child: const TuriniAccueil());\n")
+    remplacer("flutter/pubspec.yaml", "  fonts:\n    - family: GestureIcons\n",
+              "  fonts:\n" + polices_pubspec() + "    - family: GestureIcons\n")
 
     # Sans serveur d'API à nous, ne jamais se rabattre sur celui de RustDesk (comptes, appareils).
     remplacer("src/common.rs", '    "https://admin.rustdesk.com".to_owned()\n}',
@@ -85,17 +158,19 @@ def main():
     remplacer(rc, 'All rights reserved." "\\0"',
               'Turini, d\'après RustDesk (AGPL-3.0, code : github.com/Alpine56/turini-assistance)." "\\0"')
 
-    # Lanceur portable : mise à jour au démarrage (src/turini_maj.rs, propre à Turini).
+    # Lanceur portable : raccourci sur le bureau et mise à jour au démarrage
+    # (src/turini_bureau.rs et src/turini_maj.rs, propres à Turini).
     portable = "libs/portable"
     remplacer(f"{portable}/src/main.rs", "fn main() -> Result<(), String> {",
-              "#[cfg(windows)]\nmod turini_maj;\n\nfn main() -> Result<(), String> {")
+              "#[cfg(windows)]\nmod turini_bureau;\n#[cfg(windows)]\nmod turini_maj;\n\nfn main() -> Result<(), String> {")
     remplacer(f"{portable}/src/main.rs", "    let click_setup = args.is_empty()",
-              "    #[cfg(windows)]\n    if args.is_empty() && turini_maj::verifier() {\n        return Ok(());\n    }\n"
+              "    #[cfg(windows)]\n    if args.is_empty() && (turini_bureau::preparer() || turini_maj::verifier()) {\n"
+              "        return Ok(());\n    }\n"
               "    let click_setup = args.is_empty()")
     remplacer(f"{portable}/Cargo.toml", '    "Win32_System_SystemInformation",\n] }',
               '    "Win32_System_SystemInformation",\n    "Win32_Security",\n    "Win32_Security_Cryptography",\n'
               '    "Win32_System_Com",\n    "Win32_System_Com_Urlmon",\n    "Win32_UI",\n'
-              '    "Win32_UI_WindowsAndMessaging",\n] }')
+              '    "Win32_UI_WindowsAndMessaging",\n    "Win32_UI_Shell",\n] }')
     remplacer(f"{portable}/Cargo.toml", 'ProductName = "RustDesk"', f'ProductName = "{PRODUIT}"')
     remplacer(f"{portable}/Cargo.toml", 'FileDescription = "RustDesk Remote Desktop"', f'FileDescription = "{PRODUIT}"')
     remplacer(f"{portable}/Cargo.toml", 'OriginalFilename = "rustdesk.exe"', 'OriginalFilename = "turini-assistance.exe"')
@@ -117,6 +192,11 @@ def main():
             if not (RACINE / cible).exists():
                 sys.exit(f"{cible} n'existe plus : RustDesk a changé, adapter ce script.")
             shutil.copyfile(MARQUE / source, RACINE / cible)
+    nouveaux = {MARQUE / "logo-entete.svg": "flutter/assets/turini-logo.svg"}
+    nouveaux.update({MARQUE / "polices" / f: f"flutter/assets/{f}" for _, f, _ in POLICES})
+    nouveaux.update({f: f"flutter/lib/desktop/pages/{f.name}" for f in (RACINE / "turini" / "flutter").glob("*.dart")})
+    for source, cible in nouveaux.items():
+        shutil.copyfile(source, RACINE / cible)
     print(f"Icônes Turini copiées. Client {PRODUIT} : serveur {hote}.")
 
 
