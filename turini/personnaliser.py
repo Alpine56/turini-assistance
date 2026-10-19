@@ -192,7 +192,15 @@ def main():
             if not (RACINE / cible).exists():
                 sys.exit(f"{cible} n'existe plus : RustDesk a changé, adapter ce script.")
             shutil.copyfile(MARQUE / source, RACINE / cible)
-    nouveaux = {MARQUE / "logo-entete.svg": "flutter/assets/turini-logo.svg"}
+    if not (RACINE / "libs/portable/src/ui.rs").exists():
+        sys.exit("libs/portable/src/ui.rs n'existe plus : RustDesk a changé, adapter ce script.")
+    nouveaux = {
+        MARQUE / "logo-entete.svg": "flutter/assets/turini-logo.svg",
+        MARQUE / "logo-mot.svg": "flutter/assets/turini-mot.svg",
+        # Fenêtre de préparation du lanceur : la voiture Turini au lieu de « Loading... ».
+        RACINE / "turini" / "lanceur" / "ui.rs": "libs/portable/src/ui.rs",
+        RACINE / "turini" / "lanceur" / "demarrage.gif": "libs/portable/src/res/turini-demarrage.gif",
+    }
     nouveaux.update({MARQUE / "polices" / f: f"flutter/assets/{f}" for _, f, _ in POLICES})
     nouveaux.update({f: f"flutter/lib/desktop/pages/{f.name}" for f in (RACINE / "turini" / "flutter").glob("*.dart")})
     for source, cible in nouveaux.items():

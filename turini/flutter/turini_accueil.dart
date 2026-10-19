@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/desktop/pages/connection_page.dart';
 import 'package:flutter_hbb/desktop/pages/turini_ecran.dart';
+import 'package:flutter_hbb/desktop/pages/turini_intro.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:get/get.dart';
@@ -20,6 +21,8 @@ class TuriniAccueil extends StatefulWidget {
 }
 
 class _TuriniAccueilState extends State<TuriniAccueil> {
+  bool _intro = true;
+
   @override
   void initState() {
     super.initState();
@@ -45,18 +48,27 @@ class _TuriniAccueilState extends State<TuriniAccueil> {
         ListenableBuilder(
           listenable: Listenable.merge([model.serverId, model.serverPasswd]),
           builder: (context, _) => Obx(
-            () => TuriniEcran(
-              identifiant: model.serverId.text,
-              code: model.serverPasswd.text,
-              etat: switch (stateGlobal.svcStatus.value) {
-                SvcStatus.ready => EtatTurini.pret,
-                SvcStatus.connecting => EtatTurini.connexion,
-                SvcStatus.notReady => EtatTurini.horsLigne,
-              },
-              onCopierIdentifiant: () => _copier(model.serverId.text),
-              onCopierCode: () => _copier(model.serverPasswd.text),
-              onNouveauCode: () => bind.mainUpdateTemporaryPassword(),
-            ),
+            () => Stack(children: [
+              TuriniEcran(
+                identifiant: model.serverId.text,
+                code: model.serverPasswd.text,
+                etat: switch (stateGlobal.svcStatus.value) {
+                  SvcStatus.ready => EtatTurini.pret,
+                  SvcStatus.connecting => EtatTurini.connexion,
+                  SvcStatus.notReady => EtatTurini.horsLigne,
+                },
+                onCopierIdentifiant: () => _copier(model.serverId.text),
+                onCopierCode: () => _copier(model.serverPasswd.text),
+                onNouveauCode: () => bind.mainUpdateTemporaryPassword(),
+              ),
+              // Animation de démarrage, retirée dès que l'identifiant et le serveur sont prêts.
+              if (_intro)
+                TuriniIntro(
+                  pret: stateGlobal.svcStatus.value == SvcStatus.ready &&
+                      model.serverId.text.isNotEmpty,
+                  onFini: () => setState(() => _intro = false),
+                ),
+            ]),
           ),
         ),
       ],

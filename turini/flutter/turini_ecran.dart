@@ -148,7 +148,7 @@ class TuriniEcran extends StatelessWidget {
               ],
             ),
           ),
-          const _Damier(),
+          const TuriniDamier(),
         ],
       ),
     );
@@ -314,8 +314,8 @@ class _Etat extends StatelessWidget {
 }
 
 /// Bande à damier, comme la ligne d'arrivée du site et de la présentation.
-class _Damier extends StatelessWidget {
-  const _Damier();
+class TuriniDamier extends StatelessWidget {
+  const TuriniDamier({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

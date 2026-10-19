@@ -261,6 +261,14 @@ jobs:
       with:
         name: ${{ matrix.job.arch == 'aarch64' && 'topmostwindow-artifacts-ARM64' || 'topmostwindow-artifacts-x64' }}
         path: ./rustdesk
+    - name: Alléger Turini Assistance
+      # Inutile pour un client qu'on dépanne : imprimante à distance, écran virtuel, image de la
+      # version mobile. RustDesk se passe de ces fichiers quand ils manquent.
+      shell: bash
+      run: |
+        rm -rfv ./rustdesk/usbmmidd_v2 ./rustdesk/drivers ./rustdesk/printer_driver_adapter.dll \
+          ./rustdesk/dylib_virtual_display.dll ./rustdesk/data/flutter_assets/assets/scam.png
+        du -sh ./rustdesk
     - name: Build self-extracted executable
       shell: bash
       if: env.UPLOAD_ARTIFACT == 'true'

@@ -7,7 +7,11 @@ ce dépôt public contient tout le code du client distribué.
 - `personnaliser.py` : les modifications, appliquées juste avant la compilation.
 - `marque/` : icônes et logo Turini, polices du site (`polices/`, SIL Open Font License).
 - `flutter/` : écran d'accueil Turini (`turini_ecran.dart` pour le dessin, `turini_accueil.dart`
-  pour le branchement), copié dans `flutter/lib/desktop/pages/` à la compilation.
+  pour le branchement), copié dans `flutter/lib/desktop/pages/` à la compilation. À chaque
+  démarrage, `turini_intro.dart` joue l'animation Turini (le carré bleu devient le logo, une voiture
+  parcourt ses lacets) jusqu'à ce que l'identifiant et le serveur soient prêts.
+- `lanceur/` : fenêtre affichée pendant que le lanceur décompresse l'application (premier lancement
+  et après une mise à jour). `ui.rs` remplace celui de RustDesk, `demarrage.gif` est l'animation.
 - Réglages verrouillés (`REGLAGES` dans `personnaliser.py`) : réception seule, aucun réglage
   visible, pas d'installation, code d'accès à usage unique, pas de modification des réglages à
   distance, pas d'annonce sur le réseau local ni d'accès direct par IP.
@@ -18,6 +22,8 @@ ce dépôt public contient tout le code du client distribué.
   avec l'adresse du serveur et sa clé publique). L'exécutable sort en artefact
   `turini-assistance-windows`, et une version GitHub `v<date>.<n>` est publiée avec
   `turini-assistance.exe` et sa fiche `turini-assistance.txt` (version, adresse, empreinte).
+  L'étape « Alléger Turini Assistance » retire ce qui ne sert pas au client dépanné (imprimante
+  à distance, écran virtuel).
 - Mise à jour au démarrage : `libs/portable/src/turini_maj.rs`. Le lanceur lit la fiche publiée sur le
   site de Turini (entrée `maj` de la compilation) et propose la nouvelle version si elle existe.
 
