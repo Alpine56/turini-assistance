@@ -5,7 +5,15 @@ personnalisé (nom, icônes, serveur et clé de Turini intégrés). Licence AGPL
 ce dépôt public contient tout le code du client distribué.
 
 - `personnaliser.py` : les modifications, appliquées juste avant la compilation.
-- `marque/` : icônes Turini.
+- `marque/` : icônes et logo Turini, polices du site (`polices/`, SIL Open Font License).
+- `flutter/` : écran d'accueil Turini (`turini_ecran.dart` pour le dessin, `turini_accueil.dart`
+  pour le branchement), copié dans `flutter/lib/desktop/pages/` à la compilation.
+- Réglages verrouillés (`REGLAGES` dans `personnaliser.py`) : réception seule, aucun réglage
+  visible, pas d'installation, code d'accès à usage unique, pas de modification des réglages à
+  distance, pas d'annonce sur le réseau local ni d'accès direct par IP.
+- Raccourci sur le bureau : `libs/portable/src/turini_bureau.rs`. Au premier lancement, le logiciel se
+  recopie dans le dossier de l'utilisateur (`Turini\Assistance` sous `%LOCALAPPDATA%`) et pose
+  « Turini Assistance » sur le bureau, sans service ni droits administrateur.
 - `.github/workflows/turini-windows.yml` : compilation Windows (onglet Actions, « Run workflow »,
   avec l'adresse du serveur et sa clé publique). L'exécutable sort en artefact
   `turini-assistance-windows`, et une version GitHub `v<date>.<n>` est publiée avec
