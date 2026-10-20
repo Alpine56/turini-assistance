@@ -11,7 +11,10 @@ le script s'arrête au lieu de produire un client à moitié personnalisé.
 RustDesk est sous licence AGPL-3.0 : le code de ce client (ce dépôt) reste public.
 """
 
+import hashlib
+import os
 import re
+import secrets
 import shutil
 import sys
 from pathlib import Path
@@ -44,11 +47,13 @@ REGLAGES = {
         "hide-remote-printer-settings": "Y",
         "hide-stop-service": "Y",
         "disable-change-id": "Y",
-        "disable-change-permanent-password": "Y",
+    },
+    # Valeurs de départ, que seul le menu technicien (code Turini) modifie pendant une intervention.
+    "DEFAULT_SETTINGS": {
+        "verification-method": "use-temporary-password",  # code à usage unique tant qu'aucun technicien n'a posé de mot de passe permanent
     },
     # Imposés même si un fichier de configuration local dit autre chose.
     "OVERWRITE_SETTINGS": {
-        "verification-method": "use-temporary-password",  # code à usage unique, jamais de mot de passe permanent
         "allow-remote-config-modification": "N",  # le technicien ne peut pas changer ces réglages à distance
         "enable-lan-discovery": "N",  # le poste ne s'annonce pas sur le réseau local
         "direct-server": "N",  # pas d'accès direct par adresse IP, tout passe par le serveur Turini
@@ -76,6 +81,29 @@ def polices_pubspec():
             if "Italic" in fichier:
                 lignes.append("          style: italic")
     return "\n".join(lignes) + "\n"
+
+
+# Code du menu technicien : secret GitHub TURINI_CODE_TECHNICIEN, jamais dans Git. Seule son empreinte
+# PBKDF2-SHA256 (sel aléatoire à chaque compilation) entre dans l'application.
+ITERATIONS_CODE = 120_000
+LONGUEUR_CODE_MIN = 12
+
+
+def code_technicien_dart():
+    code = os.environ.get("TURINI_CODE_TECHNICIEN", "")
+    if not code:
+        print("TURINI_CODE_TECHNICIEN absent : menu technicien désactivé dans cette version.")
+        sel = empreinte = ""
+    elif len(code) < LONGUEUR_CODE_MIN:
+        sys.exit(f"TURINI_CODE_TECHNICIEN trop court : au moins {LONGUEUR_CODE_MIN} caractères.")
+    else:
+        sel_octets = secrets.token_bytes(16)
+        sel = sel_octets.hex()
+        empreinte = hashlib.pbkdf2_hmac("sha256", code.encode("utf-8"), sel_octets, ITERATIONS_CODE).hex()
+    return ("// Généré par turini/personnaliser.py à la compilation : ne pas modifier, ne pas versionner.\n"
+            f"const kTuriniSel = '{sel}';\n"
+            f"const kTuriniEmpreinte = '{empreinte}';\n"
+            f"const kTuriniIterations = {ITERATIONS_CODE};\n")
 
 
 def table_rust(valeurs):
@@ -205,6 +233,7 @@ def main():
     nouveaux.update({f: f"flutter/lib/desktop/pages/{f.name}" for f in (RACINE / "turini" / "flutter").glob("*.dart")})
     for source, cible in nouveaux.items():
         shutil.copyfile(source, RACINE / cible)
+    (RACINE / "flutter/lib/desktop/pages/turini_code.dart").write_text(code_technicien_dart(), encoding="utf-8")
     print(f"Icônes Turini copiées. Client {PRODUIT} : serveur {hote}.")
 
 

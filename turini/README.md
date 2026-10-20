@@ -15,6 +15,13 @@ ce dépôt public contient tout le code du client distribué.
 - Réglages verrouillés (`REGLAGES` dans `personnaliser.py`) : réception seule, aucun réglage
   visible, pas d'installation, code d'accès à usage unique, pas de modification des réglages à
   distance, pas d'annonce sur le réseau local ni d'accès direct par IP.
+- Menu technicien (`flutter/turini_technicien.dart`) : Ctrl+Maj+T sur l'écran Turini, puis le code
+  technicien. Il pose un mot de passe permanent, installe le logiciel sur le poste (pour le retrouver
+  après un redémarrage) et « Fin d'intervention » remet le code à usage unique seul. Le client voit un
+  bandeau tant qu'un accès permanent est actif. Le code vient du secret GitHub
+  `TURINI_CODE_TECHNICIEN` (12 caractères au moins) : seule son empreinte PBKDF2-SHA256 entre dans
+  l'application (`turini_code.dart`, généré). Sans ce secret, le menu est désactivé. Cinq codes faux
+  bloquent le menu jusqu'au redémarrage du logiciel.
 - Raccourci sur le bureau : `libs/portable/src/turini_bureau.rs`. Au premier lancement, le logiciel se
   recopie dans le dossier de l'utilisateur (`Turini\Assistance` sous `%LOCALAPPDATA%`) et pose
   « Turini Assistance » sur le bureau, sans service ni droits administrateur.

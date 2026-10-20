@@ -32,6 +32,7 @@ class TuriniEcran extends StatelessWidget {
     required this.onCopierIdentifiant,
     required this.onCopierCode,
     required this.onNouveauCode,
+    this.accesPermanent = false,
   }) : super(key: key);
 
   final String identifiant;
@@ -40,6 +41,8 @@ class TuriniEcran extends StatelessWidget {
   final VoidCallback onCopierIdentifiant;
   final VoidCallback onCopierCode;
   final VoidCallback onNouveauCode;
+  // Un technicien a posé un mot de passe permanent : le client doit le voir.
+  final bool accesPermanent;
 
   static const _texte = TextStyle(
       fontFamily: 'Barlow', color: TuriniCouleurs.asphalte, fontSize: 14);
@@ -155,6 +158,26 @@ class TuriniEcran extends StatelessWidget {
   }
 
   Widget _pied() {
+    if (accesPermanent) {
+      return Container(
+        padding: const EdgeInsets.fromLTRB(22, 12, 22, 14),
+        color: TuriniCouleurs.orange.withOpacity(0.12),
+        child: const Row(
+          children: [
+            Icon(Icons.key_rounded, size: 18, color: TuriniCouleurs.orange),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Accès permanent actif : votre technicien Turini peut se reconnecter '
+                'sans code. Il le retire à la fin de l\'intervention.',
+                style: TextStyle(
+                    fontSize: 12, height: 1.35, color: TuriniCouleurs.asphalte),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Container(
       padding: const EdgeInsets.fromLTRB(22, 12, 22, 14),
       decoration: const BoxDecoration(

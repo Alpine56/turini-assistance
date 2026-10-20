@@ -8,6 +8,7 @@ import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/desktop/pages/connection_page.dart';
 import 'package:flutter_hbb/desktop/pages/turini_ecran.dart';
 import 'package:flutter_hbb/desktop/pages/turini_intro.dart';
+import 'package:flutter_hbb/desktop/pages/turini_technicien.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:get/get.dart';
@@ -22,6 +23,7 @@ class TuriniAccueil extends StatefulWidget {
 
 class _TuriniAccueilState extends State<TuriniAccueil> {
   bool _intro = true;
+  bool _accesPermanent = false;
 
   @override
   void initState() {
@@ -30,6 +32,36 @@ class _TuriniAccueilState extends State<TuriniAccueil> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       windowManager.setSize(getIncomingOnlyHomeSize());
     });
+    HardwareKeyboard.instance.addHandler(_touche);
+    _relireAcces();
+  }
+
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_touche);
+    super.dispose();
+  }
+
+  // Ctrl+Maj+T : menu technicien, protégé par le code technicien Turini.
+  bool _touche(KeyEvent evenement) {
+    final clavier = HardwareKeyboard.instance;
+    if (evenement is! KeyDownEvent ||
+        evenement.logicalKey != LogicalKeyboardKey.keyT ||
+        !clavier.isControlPressed ||
+        !clavier.isShiftPressed ||
+        !menuTechnicienDisponible) {
+      return false;
+    }
+    ouvrirMenuTechnicien(context, _relireAcces);
+    return true;
+  }
+
+  Future<void> _relireAcces() async {
+    final motDePasse =
+        await bind.mainGetCommon(key: 'permanent-password-set') == 'true';
+    final methode = await bind.mainGetOption(key: 'verification-method');
+    final actif = motDePasse && methode != 'use-temporary-password';
+    if (mounted) setState(() => _accesPermanent = actif);
   }
 
   void _copier(String texte) {
@@ -60,6 +92,7 @@ class _TuriniAccueilState extends State<TuriniAccueil> {
                 onCopierIdentifiant: () => _copier(model.serverId.text),
                 onCopierCode: () => _copier(model.serverPasswd.text),
                 onNouveauCode: () => bind.mainUpdateTemporaryPassword(),
+                accesPermanent: _accesPermanent,
               ),
               // Animation de démarrage, retirée dès que l'identifiant et le serveur sont prêts.
               if (_intro)

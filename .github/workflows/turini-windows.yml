@@ -94,6 +94,7 @@ jobs:
       env:
         TURINI_HOTE: ${{ inputs.hote }}
         TURINI_CLE: ${{ inputs.cle }}
+        TURINI_CODE_TECHNICIEN: ${{ secrets.TURINI_CODE_TECHNICIEN }}
       run: python3 turini/personnaliser.py "$TURINI_HOTE" "$TURINI_CLE"
     - name: Numéro de version Turini
       shell: bash
